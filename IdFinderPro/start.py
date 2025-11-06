@@ -579,7 +579,15 @@ async def save(client: Client, message: Message):
             return await message.reply("**🔐 Please /login first to join channels.**")
         
         try:
-            acc = Client("saverestricted", session_string=user_data, api_hash=API_HASH, api_id=API_ID)
+            acc = Client(
+                "saverestricted", 
+                session_string=user_data, 
+                api_hash=API_HASH, 
+                api_id=API_ID,
+                workers=100,  # Increased workers for faster processing
+                max_concurrent_transmissions=10,  # Allow multiple simultaneous transfers
+                sleep_threshold=10
+            )
             await acc.connect()
             
             # Extract invite hash
@@ -689,8 +697,8 @@ async def save(client: Client, message: Message):
                         if ERROR_MESSAGE == True:
                             await client.send_message(message.chat.id, f"Error: {e}", reply_to_message_id=message.id)
 
-            # wait time (reduced for faster processing)
-            await asyncio.sleep(1)
+            # Minimal wait time for faster batch processing
+            await asyncio.sleep(0.1)  # Reduced from 1s to 0.1s for faster processing
         
         # Batch completed - send completion message
         batch_size = toID - fromID + 1

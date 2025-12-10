@@ -318,5 +318,138 @@ class Database:
         """Get filename word replacement pattern"""
         user = await self.col.find_one({'id': int(user_id)})
         return user.get('replace_filename_words') if user else None
+    
+    # Global settings methods
+    async def get_global_setting(self, key, default=None):
+        """Get a global setting value"""
+        settings_col = self.db.global_settings
+        setting = await settings_col.find_one({'key': key})
+        return setting.get('value') if setting else default
+    
+    async def set_global_setting(self, key, value):
+        """Set a global setting value"""
+        settings_col = self.db.global_settings
+        await settings_col.update_one(
+            {'key': key},
+            {'$set': {'key': key, 'value': value}},
+            upsert=True
+        )
+    
+    async def get_all_global_settings(self):
+        """Get all global settings as a dictionary"""
+        settings_col = self.db.global_settings
+        cursor = settings_col.find({})
+        settings = {}
+        async for setting in cursor:
+            settings[setting['key']] = setting['value']
+        return settings
+    
+    async def init_global_settings(self):
+        """Initialize global settings with defaults if not exist"""
+        defaults = {
+            'pricing_1day': 10,
+            'pricing_7day': 40,
+            'pricing_30day': 100,
+            'pricing_1day_usd': 0.15,
+            'pricing_7day_usd': 0.50,
+            'pricing_30day_usd': 1.20,
+            'admin_telegram_handle': '@tataa_sumo',
+            'help_footer': 'For support, contact admin',
+            'free_daily_limit': 10,
+            'premium_daily_limit': 999999
+        }
+        
+        for key, value in defaults.items():
+            existing = await self.get_global_setting(key)
+            if existing is None:
+                await self.set_global_setting(key, value)
+    
+    # Force subscribe channels methods
+    async def get_force_sub_channels(self):
+        """Get all force subscribe channels"""
+        channels_col = self.db.force_sub_channels
+        channel_doc = await channels_col.find_one({'_id': 'channels'})
+        return channel_doc.get('channels', []) if channel_doc else []
+    
+    async def add_force_sub_channel(self, channel_id, channel_username=None):
+        """Add a force subscribe channel (max 4)"""
+        channels = await self.get_force_sub_channels()
+        
+        if len(channels) >= 4:
+            return False, "Maximum 4 channels allowed"
+        
+        # Check if already exists
+        for ch in channels:
+            if ch['id'] == channel_id:
+                return False, "Channel already added"
+        
+        channels.append({
+            'id': int(channel_id),
+            'username': channel_username
+        })
+        
+        channels_col = self.db.force_sub_channels
+        await channels_col.update_one(
+            {'_id': 'channels'},
+            {'$set': {'channels': channels}},
+            upsert=True
+        )
+        return True, "Channel added successfully"
+    
+    async def remove_force_sub_channel(self, channel_id):
+        """Remove a force subscribe channel"""
+        channels = await self.get_force_sub_channels()
+        channels = [ch for ch in channels if ch['id'] != int(channel_id)]
+        
+        channels_col = self.db.force_sub_channels
+        await channels_col.update_one(
+            {'_id': 'channels'},
+            {'$set': {'channels': channels}},
+            upsert=True
+        )
+        return True
+    
+    # UPI payment details methods
+    async def get_upi_details(self):
+        """Get UPI payment details"""
+        upi_col = self.db.upi_details
+        upi = await upi_col.find_one({'_id': 'upi'})
+        return {
+            'upi_id': upi.get('upi_id') if upi else None,
+            'receiver_name': upi.get('receiver_name') if upi else None,
+            'qr_file_id': upi.get('qr_file_id') if upi else None
+        }
+    
+    async def set_upi_id(self, upi_id):
+        """Set UPI ID"""
+        upi_col = self.db.upi_details
+        await upi_col.update_one(
+            {'_id': 'upi'},
+            {'$set': {'upi_id': upi_id}},
+            upsert=True
+        )
+    
+    async def set_receiver_name(self, receiver_name):
+        """Set receiver name for UPI"""
+        upi_col = self.db.upi_details
+        await upi_col.update_one(
+            {'_id': 'upi'},
+            {'$set': {'receiver_name': receiver_name}},
+            upsert=True
+        )
+    
+    async def set_upi_qr(self, qr_file_id):
+        """Set UPI QR code file ID (for static QR - optional)"""
+        upi_col = self.db.upi_details
+        await upi_col.update_one(
+            {'_id': 'upi'},
+            {'$set': {'qr_file_id': qr_file_id}},
+            upsert=True
+        )
+    
+    async def clear_upi_details(self):
+        """Clear all UPI details"""
+        upi_col = self.db.upi_details
+        await upi_col.delete_one({'_id': 'upi'})
 
 db = Database(DB_URI, DB_NAME)

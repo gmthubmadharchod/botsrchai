@@ -42,6 +42,10 @@ class Bot(Client):
             
         await super().start()
         
+        # Initialize global settings with defaults if not exist
+        from database.db import db
+        await db.init_global_settings()
+        
         # Set bot commands menu
         await self.set_bot_commands([
             BotCommand("start", "Start the bot"),

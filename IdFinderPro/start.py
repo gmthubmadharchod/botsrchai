@@ -9,17 +9,35 @@ from config import API_ID, API_HASH, ERROR_MESSAGE, FORCE_SUB_CHANNEL, FORCE_SUB
 from database.db import db
 from IdFinderPro.strings import HELP_TXT
 
-# Force subscription check
+# Force subscription check - supports multiple channels
 async def check_force_sub(client: Client, user_id: int):
-    """Check if user has joined the force subscription channel"""
-    try:
-        member = await client.get_chat_member(FORCE_SUB_CHANNEL_ID, user_id)
-        return member.status not in ["left", "kicked"]
-    except UserNotParticipant:
-        return False
-    except Exception as e:
-        print(f"Force sub check error: {e}")
-        return True  # Don't block if error checking
+    """Check if user has joined ALL force subscription channels"""
+    # Get channels from database
+    channels = await db.get_force_sub_channels()
+    
+    # If no channels configured, allow access
+    if not channels:
+        # Fallback to config if database is empty (for backward compatibility)
+        try:
+            member = await client.get_chat_member(FORCE_SUB_CHANNEL_ID, user_id)
+            return member.status not in ["left", "kicked"]
+        except:
+            return True
+    
+    # Check all channels - user must join ALL
+    for channel in channels:
+        try:
+            member = await client.get_chat_member(channel['id'], user_id)
+            if member.status in ["left", "kicked"]:
+                return False
+        except UserNotParticipant:
+            return False
+        except Exception as e:
+            print(f"Force sub check error for channel {channel['id']}: {e}")
+            # Continue checking other channels
+            continue
+    
+    return True  # User joined all channels
 
 class batch_temp(object):
     IS_BATCH = {}
@@ -447,10 +465,21 @@ async def admin_panel(client: Client, message: Message):
 • Total Users: {total_users}
 • Premium Users: {len(premium_users)}
 
-**Commands:**
-/generate - Generate redeem codes
-/premiumlist - Manage premium users
-/broadcast - Broadcast message
+**📋 All Admin Commands:**
+
+**Premium Management:**
+• /generate - Generate redeem codes
+• /premiumlist - Manage premium users
+
+**Bot Configuration:**
+• /forcesub - Manage force subscribe channels (up to 4)
+• /globalconfig - Edit pricing, limits, and settings
+• /addupi - Manage UPI payment details
+
+**User Management:**
+• /broadcast - Broadcast message to users
+• /processes - View active downloads
+• /exportdata - Export user data to CSV
 
 **Quick Actions:**
 """
@@ -458,10 +487,16 @@ async def admin_panel(client: Client, message: Message):
         InlineKeyboardButton("🎟️ Generate Code", callback_data="admin_generate"),
         InlineKeyboardButton("💎 Premium List", callback_data="admin_premiumlist")
     ],[
-        InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
+        InlineKeyboardButton("⚙️ Global Config", callback_data="admin_globalconfig"),
+        InlineKeyboardButton("📢 Force Sub", callback_data="admin_forcesub")
+    ],[
+        InlineKeyboardButton("💳 UPI Settings", callback_data="admin_upi"),
+        InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
+    ],[
         InlineKeyboardButton("🏠 Main Menu", callback_data="start")
     ]]
     await message.reply(admin_text, reply_markup=InlineKeyboardMarkup(buttons))
+
 
 
 # Callback query handler for inline buttons
@@ -481,6 +516,58 @@ async def callback_handler(client: Client, query):
             await query.answer("✅ You're subscribed! Now send a link to download.", show_alert=True)
         else:
             await query.answer("❌ You haven't joined yet! Please join the channel first.", show_alert=True)
+        return
+    
+    if data == "start":
+        # Delete old message and send fresh start message
+        try:
+            await query.message.delete()
+        except:
+            pass
+        
+        # Send fresh start message
+        is_premium_user = await db.is_premium(query.from_user.id)
+        downloads_today = await db.get_download_count(query.from_user.id)
+        login_status = "✅ Logged In" if await db.user_exists(query.from_user.id) else "❌ Not Logged In"
+        plan_status = "💎 Premium" if is_premium_user else "🆓 Free"
+        
+        text = f"""**🔒 RESTRICTED CONTENT DOWNLOAD BOT**
+
+👋 Welcome {query.from_user.first_name}!
+
+I can help you download and forward restricted content from Telegram channels, groups, and bots.
+
+**📊 Your Status:**
+• Login: {login_status}
+• Plan: {plan_status}
+• Downloads: {downloads_today}/{'999999' if is_premium_user else '10'} today
+
+**🚀 Quick Start:**
+1️⃣ Use `/login` to authenticate
+2️⃣ Send me any Telegram post link
+3️⃣ Get your content instantly!
+
+**📚 Need Help?** Use `/help` for detailed guide
+
+**✨ Features:**
+• Download from private channels
+• Batch download support
+• Auto file cleanup
+• Fast and reliable"""
+        
+        buttons = [
+            [InlineKeyboardButton("📚 Help", callback_data="help"),
+             InlineKeyboardButton("💎 Premium", callback_data="premium_info")],
+            [InlineKeyboardButton("⚙️ Settings", callback_data="settings"),
+             InlineKeyboardButton("👤 Login", url="https://my.telegram.org/auth")]
+        ]
+        
+        await client.send_message(
+            query.from_user.id,
+            text,
+            reply_markup=InlineKeyboardMarkup(buttons)
+        )
+        await query.answer()
         return
     
     if data == "help":
@@ -518,24 +605,24 @@ async def callback_handler(client: Client, query):
             pass  # Ignore if message is already showing this content
     
     elif data == "premium_info":
-        # Redirect to premium menu
+        # Step 1: Show premium status with Upgrade/Extend button
         is_premium_user = await db.is_premium(query.from_user.id)
         downloads_today = await db.get_download_count(query.from_user.id)
-        limit_text = "Unlimited" if is_premium_user else "10"
         
         if is_premium_user:
+            # Premium user - show status and extend option
             user = await db.col.find_one({'id': query.from_user.id})
             expiry = user.get('premium_expiry')
             if expiry:
                 from datetime import datetime
                 expiry_date = datetime.fromtimestamp(expiry).strftime('%Y-%m-%d %H:%M')
-                expiry_text = f"Expires: {expiry_date}"
+                expiry_text = f"**Expires:** {expiry_date}"
             else:
-                expiry_text = "Lifetime Premium"
+                expiry_text = "**Lifetime Premium**"
             
-            text = f"""**💎 Premium Member**
+            text = f"""**💎 Premium Status**
 
-✅ You have Premium!
+✅ **You have Premium!**
 
 {expiry_text}
 **Usage Today:** {downloads_today} downloads (Unlimited)
@@ -543,32 +630,491 @@ async def callback_handler(client: Client, query):
 **Benefits:**
 ✅ Unlimited downloads/day
 ✅ Priority support
-✅ Faster processing"""
-            buttons = [[InlineKeyboardButton("🏠 Main Menu", callback_data="start")]]
+✅ Faster processing
+
+Want to extend your premium membership?"""
+            
+            buttons = [
+                [InlineKeyboardButton("⏰ Extend Premium", callback_data="premium_select_plan")],
+                [InlineKeyboardButton("🏠 Back", callback_data="start")]
+            ]
         else:
+            # Free user - show benefits and upgrade option
             text = f"""**💎 Premium Membership**
 
-**Current Plan:** Free
+**Current Plan:** 🆓 Free
 **Usage:** {downloads_today}/10 today
 
 **Premium Benefits:**
-✅ Unlimited downloads (no daily limit)
-✅ Priority support
-✅ Faster processing
+✅ **Unlimited downloads** (no daily limit)
+✅ **Priority support**
+✅ **Faster processing**
+✅ **No ads**
 
-**Pricing:**
-• ₹10 - 1 Day
-• ₹40 - 7 Days  
-• ₹100 - 30 Days
-
-**How to Purchase:**
-Contact admin @tataa_sumo with your preferred plan. Admin will provide payment details and redeem code."""
-            buttons = [[
-                InlineKeyboardButton("💬 Contact Admin", url="https://t.me/tataa_sumo")
-            ],[
-                InlineKeyboardButton("🏠 Main Menu", callback_data="start")
-            ]]
+Upgrade to premium and unlock all features!"""
+            
+            buttons = [
+                [InlineKeyboardButton("⬆️ Upgrade to Premium", callback_data="premium_select_plan")],
+                [InlineKeyboardButton("🏠 Back", callback_data="start")]
+            ]
         
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data == "premium_select_plan":
+        # Step 2: Plan selection with dual currency pricing
+        pricing_1day_inr = await db.get_global_setting('pricing_1day', 10)
+        pricing_7day_inr = await db.get_global_setting('pricing_7day', 40)
+        pricing_30day_inr = await db.get_global_setting('pricing_30day', 100)
+        
+        pricing_1day_usd = await db.get_global_setting('pricing_1day_usd', 0.15)
+        pricing_7day_usd = await db.get_global_setting('pricing_7day_usd', 0.50)
+        pricing_30day_usd = await db.get_global_setting('pricing_30day_usd', 1.20)
+        
+        text = """**💎 Select Your Plan**
+
+Choose the duration that works best for you:
+
+**Plans Available:**"""
+        
+        buttons = [
+            [InlineKeyboardButton(f"📅 1 Day - ₹{pricing_1day_inr} / ${pricing_1day_usd}", callback_data="premium_payment_1day")],
+            [InlineKeyboardButton(f"📅 7 Days - ₹{pricing_7day_inr} / ${pricing_7day_usd}", callback_data="premium_payment_7day")],
+            [InlineKeyboardButton(f"📅 30 Days - ₹{pricing_30day_inr} / ${pricing_30day_usd} Recommended", callback_data="premium_payment_30day")],
+            [InlineKeyboardButton("🔙 Back", callback_data="premium_info")]
+        ]
+        
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data.startswith("premium_payment_"):
+        # Step 3: Payment method selection (INR or USD/USDT)
+        plan = data.split("_")[-1]  # 1day, 7day, or 30day
+        
+        pricing_inr = await db.get_global_setting(f'pricing_{plan}', 10)
+        pricing_usd = await db.get_global_setting(f'pricing_{plan}_usd', 0.15)
+        
+        plan_name = plan.replace('day', ' Days' if 'day' in plan and plan[0] != '1' else ' Day')
+        
+        text = f"""**💳 Select Payment Method**
+
+**Plan:** {plan_name}
+**Price:** ₹{pricing_inr} (INR) / ${pricing_usd} (USD)
+
+Choose your preferred payment method:"""
+        
+        buttons = [
+            [InlineKeyboardButton("🇮🇳 Pay with UPI (INR)", callback_data=f"premium_inr_{plan}")],
+            [InlineKeyboardButton("🌍 Pay with USD/USDT", callback_data=f"premium_usd_{plan}")],
+            [InlineKeyboardButton("🔙 Back", callback_data="premium_select_plan")]
+        ]
+        
+        # Check if message has photo (from back button of QR screen)
+        if query.message.photo:
+            # Delete photo message and send new text message
+            try:
+                await query.message.delete()
+                await client.send_message(
+                    query.from_user.id,
+                    text,
+                    reply_markup=InlineKeyboardMarkup(buttons)
+                )
+            except:
+                pass
+        else:
+            # Normal text edit
+            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+        
+        await query.answer()
+        return
+    
+    elif data.startswith("premium_inr_"):
+        # Step 4a: INR/UPI Payment with dynamic QR code
+        plan = data.split("_")[-1]  # 1day, 7day, or 30day
+        
+        # Get pricing
+        amount = await db.get_global_setting(f"pricing_{plan}", 10)
+        
+        # Get UPI details
+        upi_details = await db.get_upi_details()
+        upi_id = upi_details['upi_id']
+        receiver_name = upi_details['receiver_name']
+        
+        # Get admin handle
+        admin_handle = await db.get_global_setting('admin_telegram_handle', '@tataa_sumo')
+        
+        if not upi_id or not receiver_name:
+            await query.answer("❌ UPI payment not configured yet! Contact admin.", show_alert=True)
+            return
+        
+        plan_name = plan.replace('day', ' Days' if 'day' in plan and plan[0] != '1' else ' Day')
+        
+        # Generate dynamic QR code
+        user_id = query.from_user.id
+        upi_url = f"upi://pay?pa={upi_id}&pn={receiver_name}&am={amount}&tn={user_id}"
+        
+        import qrcode
+        import io
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(upi_url)
+        qr.make(fit=True)
+        
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        qr_bytes = io.BytesIO()
+        qr_img.save(qr_bytes, format='PNG')
+        qr_bytes.seek(0)
+        
+        text = f"""**💳 UPI Payment (INR)**
+
+**Plan:** {plan_name} Premium
+**Amount:** ₹{amount}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+**🏦 UPI ID:** `{upi_id}`
+**👤 Receiver:** {receiver_name}
+
+**📲 QR Code:** See below ⬇️
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+> **📝 Steps to Activate Premium:**
+> 
+> 1. Scan QR code below OR use UPI ID above
+> 2. Pay exact amount: **₹{amount}**
+> 3. Click "Submit Payment" button
+> 4. Send payment screenshot to admin
+> 5. Receive redeem code from admin
+> 6. Use `/redeem <code>` to activate
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Transaction ID:** `{user_id}`
+(Included in QR code for tracking)"""
+        
+        import urllib.parse
+        message_text = f"User ID: {user_id}\nPlan: {plan_name}\nAmount Paid: Rs {amount}"
+        submit_url = f"https://t.me/{admin_handle.lstrip('@')}?text={urllib.parse.quote(message_text)}"
+        
+        buttons = [
+            [InlineKeyboardButton("💰 Copy Amount", callback_data=f"copy_amount_{amount}")],
+            [InlineKeyboardButton("✅ Submit Payment", url=submit_url)],
+            [InlineKeyboardButton("🔙 Back", callback_data=f"premium_payment_{plan}")]
+        ]
+        
+        try:
+            await query.message.delete()
+            await client.send_photo(
+                query.from_user.id,
+                qr_bytes,
+                caption=text,
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        except Exception as e:
+            print(f"QR generation error: {e}")
+            error_text = text + "\n\n❌ QR Code generation failed. Please use UPI ID above."
+            await query.message.edit_text(error_text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data.startswith("premium_usd_"):
+        # Step 4b: USD/USDT Payment (contact admin)
+        plan = data.split("_")[-1]  # 1day, 7day, or 30day
+        
+        amount_usd = await db.get_global_setting(f"pricing_{plan}_usd", 0.15)
+        plan_name = plan.replace('day', ' Days' if 'day' in plan and plan[0] != '1' else ' Day')
+        
+        admin_handle = await db.get_global_setting('admin_telegram_handle', '@tataa_sumo')
+        user_id = query.from_user.id
+        
+        text = f"""**💵 USD/USDT Payment**
+
+**Plan:** {plan_name} Premium
+**Amount:** ${amount_usd}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Payment Methods Accepted:**
+• USDT (TRC20/ERC20)
+• PayPal
+• Cryptocurrency
+• Other USD methods
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+> **📝 Steps to Purchase:**
+> 
+> 1. Click "Contact Admin" button below
+> 2. Mention: Plan ({plan_name}) and Amount (${amount_usd})
+> 3. Admin will provide payment details
+> 4. Complete payment
+> 5. Send payment proof to admin
+> 6. Receive redeem code
+> 7. Use `/redeem <code>` to activate
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Your User ID:** `{user_id}`
+(Mention this when contacting admin)"""
+        
+        import urllib.parse
+        message_text = f"Hello! I want to purchase Premium\n\nPlan: {plan_name}\nAmount: ${amount_usd}\nUser ID: {user_id}\n\nPlease provide payment details for USD/USDT."
+        contact_url = f"https://t.me/{admin_handle.lstrip('@')}?text={urllib.parse.quote(message_text)}"
+        
+        buttons = [
+            [InlineKeyboardButton("💬 Contact Admin", url=contact_url)],
+            [InlineKeyboardButton("🔙 Back", callback_data=f"premium_payment_{plan}")]
+        ]
+        
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data.startswith("premium_plan_"):
+        # Handle plan selection - generate dynamic QR code
+        plan = data.split("_")[-1]  # 1day, 7day, or 30day
+        
+        # Get pricing
+        pricing_key = f"pricing_{plan}"
+        amount = await db.get_global_setting(pricing_key, 10)
+        
+        # Get UPI details
+        upi_details = await db.get_upi_details()
+        upi_id = upi_details['upi_id']
+        receiver_name = upi_details['receiver_name']
+        
+        # Get admin handle
+        admin_handle = await db.get_global_setting('admin_telegram_handle', '@tataa_sumo')
+        
+        if not upi_id or not receiver_name:
+            await query.answer("❌ UPI payment not configured yet! Contact admin.", show_alert=True)
+            return
+        
+        plan_name = plan.replace('day', ' Days' if 'day' in plan and plan[0] != '1' else ' Day')
+        
+        # Generate dynamic QR code with UPI payment URL
+        user_id = query.from_user.id
+        
+        # UPI payment URL format: upi://pay?pa={upi_id}&pn={receiver_name}&am={amount}&tn={userid}
+        upi_url = f"upi://pay?pa={upi_id}&pn={receiver_name}&am={amount}&tn={user_id}"
+        
+        # Generate QR code
+        import qrcode
+        import io
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(upi_url)
+        qr.make(fit=True)
+        
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Save to bytes
+        qr_bytes = io.BytesIO()
+        qr_img.save(qr_bytes, format='PNG')
+        qr_bytes.seek(0)
+        
+        # Message with UPI details and instructions
+        text = f"""**💳 Payment Details**
+
+**Plan:** {plan_name} Premium
+**Amount:** ₹{amount}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+**🏦 UPI ID:** `{upi_id}`
+**👤 Receiver:** {receiver_name}
+
+**📲 QR Code:** See below ⬇️
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+> **📝 Steps to Activate Premium:**
+> 
+> 1. Scan QR code below OR use UPI ID above
+> 2. Pay exact amount: **₹{amount}**
+> 3. Click "Submit Payment" button
+> 4. Send payment screenshot to admin
+> 5. Receive redeem code from admin
+> 6. Use `/redeem <code>` to activate
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Transaction ID:** `{user_id}`
+(This is included in the QR code for tracking)"""
+        
+        # Buttons with Submit Payment
+        submit_url = f"https://t.me/{admin_handle.lstrip('@')}?text=User ID: {user_id}%0APlan: {plan_name}%0AAmount Paid: ₹{amount}"
+        
+        buttons = [
+            [InlineKeyboardButton("💰 Copy Amount", callback_data=f"copy_amount_{amount}")],
+            [InlineKeyboardButton("✅ Submit Payment", url=submit_url)],
+            [InlineKeyboardButton("🔙 Back", callback_data="premium_info")]
+        ]
+        
+        # Send QR code with caption
+        try:
+            await query.message.delete()
+            await client.send_photo(
+                query.from_user.id,
+                qr_bytes,
+                caption=text,
+                reply_markup=InlineKeyboardMarkup(buttons)
+            )
+        except Exception as e:
+            # If QR generation failed, send text only
+            print(f"QR generation error: {e}")
+            error_text = text + "\n\n❌ QR Code generation failed. Please use UPI ID above."
+            await query.message.edit_text(error_text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data.startswith("copy_amount_"):
+        amount = data.split("_")[-1]
+        await query.answer(f"Amount: ₹{amount} (Click to copy from message above)", show_alert=True)
+    
+    # Admin panel callbacks
+    elif data == "admin_panel":
+        # Return to admin panel
+        from config import ADMINS
+        if query.from_user.id not in [ADMINS] if isinstance(ADMINS, int) else ADMINS:
+            await query.answer("❌ Admin only!", show_alert=True)
+            return
+        
+        total_users = await db.total_users_count()
+        premium_users = await db.get_all_premium_users()
+        
+        admin_text = f"""**🔧 ADMIN PANEL**
+
+📊 **Statistics:**
+• Total Users: {total_users}
+• Premium Users: {len(premium_users)}
+
+**📋 All Admin Commands:**
+
+**Premium Management:**
+• `/generate` - Generate redeem codes
+• `/premiumlist` - Manage premium users
+
+**Bot Configuration:**
+• `/forcesub` - Manage force subscribe channels (up to 4)
+• `/globalconfig` - Edit pricing, limits, and settings
+• `/addupi` - Manage UPI payment details
+
+**User Management:**
+• `/broadcast` - Broadcast message to users
+• `/processes` - View active downloads
+• `/exportdata` - Export user data to CSV
+
+**Quick Actions:**
+"""
+        buttons = [[
+            InlineKeyboardButton("🎟️ Generate Code", callback_data="admin_generate"),
+            InlineKeyboardButton("💎 Premium List", callback_data="admin_premiumlist")
+        ],[
+            InlineKeyboardButton("⚙️ Global Config", callback_data ="admin_globalconfig"),
+            InlineKeyboardButton("📢 Force Sub", callback_data="admin_forcesub")
+        ],[
+            InlineKeyboardButton("💳 UPI Settings", callback_data="admin_upi"),
+            InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")
+        ],[
+            InlineKeyboardButton("🏠 Main Menu", callback_data="start")
+        ]]
+        await query.message.edit_text(admin_text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data == "admin_globalconfig":
+        # Trigger globalconfig menu - use command simulation
+        from config import ADMINS
+        if query.from_user.id not in [ADMINS] if isinstance(ADMINS, int) else ADMINS:
+            await query.answer("❌ Admin only!", show_alert=True)
+            return
+        
+        settings = await db.get_all_global_settings()
+        
+        text = f"""**⚙️ Global Configuration**
+
+Manage bot-wide settings and pricing.
+
+**Current Settings:**
+• **1 Day Price:** ₹{settings.get('pricing_1day', 10)}
+• **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
+• **30 Days Price:** ₹{settings.get('pricing_30day', 100)}
+• **Admin Handle:** {settings.get('admin_telegram_handle', '@tataa_sumo')}
+• **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
+• **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}
+
+Use `/globalconfig` command for detailed management."""
+        
+        buttons = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data == "admin_forcesub":
+        # Trigger forcesub menu
+        from config import ADMINS
+        if query.from_user.id not in [ADMINS] if isinstance(ADMINS, int) else ADMINS:
+            await query.answer("❌ Admin only!", show_alert=True)
+            return
+        
+        channels = await db.get_force_sub_channels()
+        
+        text = f"""**📢 Force Subscribe Management**
+
+**Current Channels:** {len(channels)}/4
+
+Use `/forcesub` command for detailed management.
+
+**Features:**
+• Add up to 4 channels
+• View all channels
+• Remove channels
+• Automatic subscription check"""
+        
+        buttons = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data == "admin_upi":
+        # Trigger UPI menu
+        from config import ADMINS
+        if query.from_user.id not in [ADMINS] if isinstance(ADMINS, int) else ADMINS:
+            await query.answer("❌ Admin only!", show_alert=True)
+            return
+        
+        upi_details = await db.get_upi_details()
+        upi_id = upi_details['upi_id']
+        qr_file_id = upi_details['qr_file_id']
+        
+        status = "✅ Configured" if (upi_id or qr_file_id) else "❌ Not Configured"
+        
+        text = f"""**💳 UPI Payment Management**
+
+**Status:** {status}
+
+Use `/addupi` command for detailed management.
+
+**Current Settings:**
+• **UPI ID:** {'Set' if upi_id else 'Not set'}
+• **QR Code:** {'Uploaded' if qr_file_id else 'Not uploaded'}"""
+        
+        buttons = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
+        await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    
+    elif data == "admin_stats":
+        # Show detailed statistics
+        from config import ADMINS
+        if query.from_user.id not in [ADMINS] if isinstance(ADMINS, int) else ADMINS:
+            await query.answer("❌ Admin only!", show_alert=True)
+            return
+        
+        total_users = await db.total_users_count()
+        premium_users = await db.get_all_premium_users()
+        force_sub_channels = await db.get_force_sub_channels()
+        
+        text = f"""**📊 Bot Statistics**
+
+**Users:**
+• Total Users: {total_users}
+• Premium Users: {len(premium_users)}
+• Free Users: {total_users - len(premium_users)}
+
+**Configuration:**
+• Force Subscribe Channels: {len(force_sub_channels)}/4
+
+**Premium Plans:**
+• 1 Day: ₹{await db.get_global_setting('pricing_1day', 10)}
+• 7 Days: ₹{await db.get_global_setting('pricing_7day', 40)}
+• 30 Days: ₹{await db.get_global_setting('pricing_30day', 100)}"""
+        
+        buttons = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
     
     elif data == "start":

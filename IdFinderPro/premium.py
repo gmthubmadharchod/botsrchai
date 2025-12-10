@@ -43,9 +43,9 @@ async def premium_menu(client: Client, message: Message):
         else:
             expiry_text = "**Lifetime Premium**"
         
-        text = f"""**💎 Premium Member**
+        text = f"""**💎 Premium Status**
 
-✅ You have Premium!
+✅ **You have Premium!**
 
 {expiry_text}
 **Usage Today:** {downloads_today} downloads (Unlimited)
@@ -55,37 +55,31 @@ async def premium_menu(client: Client, message: Message):
 ✅ Priority support
 ✅ Faster processing
 
-Use `/redeem` to extend membership."""
-        buttons = [[InlineKeyboardButton("🏠 Main Menu", callback_data="start")]]
+Want to extend your premium membership?"""
+        
+        buttons = [
+            [InlineKeyboardButton("⏰ Extend Premium", callback_data="premium_select_plan")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="start")]
+        ]
     else:
+        # Free user - show benefits and upgrade option
         text = f"""**💎 Premium Membership**
 
-**Current Plan:** Free
-**Usage Today:** {downloads_today}/10
+**Current Plan:** 🆓 Free
+**Usage:** {downloads_today}/10 today
 
 **Premium Benefits:**
-✅ Unlimited downloads (no daily limit)
-✅ Priority support  
-✅ Faster processing
+✅ **Unlimited downloads** (no daily limit)
+✅ **Priority support**
+✅ **Faster processing**
+✅ **No ads**
 
-**💰 Pricing:**
-• **₹10** - 1 Day
-• **₹40** - 7 Days
-• **₹100** - 30 Days
-
-**How to Purchase:**
-1. Contact @tataa_sumo
-2. Choose your plan
-3. Get payment details
-4. Receive redeem code
-5. Use `/redeem <code>`
-
-**Note:** Payment via UPI/Bank Transfer/Crypto"""
-        buttons = [[
-            InlineKeyboardButton("💬 Contact Admin", url="https://t.me/tataa_sumo")
-        ],[
-            InlineKeyboardButton("🏠 Main Menu", callback_data="start")
-        ]]
+Upgrade to premium and unlock all features!"""
+        
+        buttons = [
+            [InlineKeyboardButton("⬆️ Upgrade to Premium", callback_data="premium_select_plan")],
+            [InlineKeyboardButton("🏠 Main Menu", callback_data="start")]
+        ]
     
     await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
 

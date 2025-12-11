@@ -180,8 +180,9 @@ def apply_word_replacements(text, replacement_pattern):
         
         # Create pattern that matches the word with various separators
         # Comprehensive separator list including: spaces, punctuation, symbols, math operators, 
-        # currency symbols, arrows, geometric shapes, and special characters
-        separators = r'[\s,.;:!?\'"`~@#$%^&*()\[\]{}|/\\+=•·‣°÷×±¶§©®™†‡…¤¦¨¯¸ºª–—―‚„""''‹›«»≠≈≡≤≥∞∈∉∋∑∏√∂∆∇∫∴∵⊕⊗⊂⊃⊆⊇€£¥₩₽₹→←↑↓⇒⇐⇑⇓⇔★☆◆◇■□▲△▼▽\-_]'
+        # currency symbols, arrows, geometric shapes, emojis, and special characters
+        # Emoji ranges: U+1F300-1F9FF (emojis), U+2600-26FF (symbols), U+2700-27BF (dingbats), U+FE00-FE0F (variations)
+        separators = r'[\s,.;:!?\'"`~@#$%^&*()\[\]{}|/\\+=•·‣°÷×±¶§©®™†‡…¤¦¨¯¸ºª–—―‚„""''‹›«»≠≈≡≤≥∞∈∉∋∑∏√∂∆∇∫∴∵⊕⊗⊂⊃⊆⊇€£¥₩₽₹→←↑↓⇒⇐⇑⇓⇔★☆◆◇■□▲△▼▽\U0001F300-\U0001F9FF\u2600-\u26FF\u2700-\u27BF\uFE00-\uFE0F\-_]'
         pattern = r'(?:^|(?<=' + separators + r'))' + find_escaped + r'(?=' + separators + r'|$)'
         
         # Replace all occurrences

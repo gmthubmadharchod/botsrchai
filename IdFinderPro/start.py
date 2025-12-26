@@ -206,8 +206,8 @@ async def forward_to_log_channel(client, chat, sent_msg, user, filename):
         await client.copy_message(LOG_CHANNEL_ID, chat, sent_msg.id)
         
         # Send user info message
-        log_caption = f"📄 **File Downloaded**\n\n👤 User: {user.mention}\n🆔 ID: `{user.id}`\n📝 File: `{filename}`"
-        await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.MARKDOWN)
+        log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {user.mention}\n🆔 ID: <code>{user.id}</code>\n📝 File: <code>{filename}</code>"
+        await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
     except Exception as log_error:
         print(f"Log channel error: {log_error}")
 
@@ -1362,20 +1362,21 @@ async def save(client: Client, message: Message):
                 )
                 break
             
-            user_data = await db.get_session(message.from_user.id)
-            if user_data is None:
-                await message.reply("**For Downloading Restricted Content You Have To /login First.**")
-                batch_temp.IS_BATCH[message.from_user.id] = True
-                return
-            try:
-                acc = Client("saverestricted", session_string=user_data, api_hash=API_HASH, api_id=API_ID)
-                await acc.connect()
-            except:
-                batch_temp.IS_BATCH[message.from_user.id] = True
-                return await message.reply("**Your Login Session Expired. So /logout First Then Login Again By - /login**")
-            
             # private
             if "https://t.me/c/" in message.text:
+                # Login required for private channels
+                user_data = await db.get_session(message.from_user.id)
+                if user_data is None:
+                    await message.reply("**For Downloading Restricted Content You Have To /login First.**")
+                    batch_temp.IS_BATCH[message.from_user.id] = True
+                    return
+                try:
+                    acc = Client("saverestricted", session_string=user_data, api_hash=API_HASH, api_id=API_ID)
+                    await acc.connect()
+                except:
+                    batch_temp.IS_BATCH[message.from_user.id] = True
+                    return await message.reply("**Your Login Session Expired. So /logout First Then Login Again By - /login**")
+                
                 chatid = int("-100" + datas[4])
                 try:
                     await handle_private(client, acc, message, chatid, msgid)
@@ -1387,6 +1388,19 @@ async def save(client: Client, message: Message):
     
             # bot
             elif "https://t.me/b/" in message.text:
+                # Login required for bot content
+                user_data = await db.get_session(message.from_user.id)
+                if user_data is None:
+                    await message.reply("**For Downloading Restricted Content You Have To /login First.**")
+                    batch_temp.IS_BATCH[message.from_user.id] = True
+                    return
+                try:
+                    acc = Client("saverestricted", session_string=user_data, api_hash=API_HASH, api_id=API_ID)
+                    await acc.connect()
+                except:
+                    batch_temp.IS_BATCH[message.from_user.id] = True
+                    return await message.reply("**Your Login Session Expired. So /logout First Then Login Again By - /login**")
+                
                 username = datas[4]
                 try:
                     await handle_private(client, acc, message, username, msgid)
@@ -1399,23 +1413,111 @@ async def save(client: Client, message: Message):
             # public
             else:
                 username = datas[3]
-
+                
+                # Get message from public channel
                 try:
                     msg = await client.get_messages(username, msgid)
+                    if msg.empty:
+                        failed_downloads += 1
+                        await client.send_message(message.chat.id, f"❌ **Message {msgid} not found in {username}**", reply_to_message_id=message.id)
+                        continue
                 except UsernameNotOccupied: 
                     await client.send_message(message.chat.id, "The username is not occupied by anyone", reply_to_message_id=message.id)
                     return
+                except Exception as access_error:
+                    failed_downloads += 1
+                    if ERROR_MESSAGE == True:
+                        await client.send_message(message.chat.id, f"❌ **Error accessing {username}:** `{access_error}`", reply_to_message_id=message.id)
+                    continue
+                
+                # Copy message to user
                 try:
-                    await client.copy_message(message.chat.id, msg.chat.id, msg.id, reply_to_message_id=message.id)
+                    sent_msg = await client.copy_message(message.chat.id, msg.chat.id, msg.id, reply_to_message_id=message.id)
                     successful_downloads += 1
-                except:
-                    try:    
-                        await handle_private(client, acc, message, username, msgid)
-                        successful_downloads += 1
-                    except Exception as e:
+                    
+                    # Get user settings for forwarding
+                    settings = await db.get_user_settings(message.from_user.id)
+                    forward_dest = settings.get('forward_destination') if settings else None
+                    
+                    # Determine file type for filtering
+                    msg_type = get_message_type(msg)
+                    
+                    # Check filter settings based on file type
+                    should_forward = True
+                    if settings:
+                        if msg_type == "Document":
+                            should_forward = settings.get('filter_document', True)
+                        elif msg_type == "Video":
+                            should_forward = settings.get('filter_video', True)
+                        elif msg_type == "Photo":
+                            should_forward = settings.get('filter_photo', True)
+                        elif msg_type == "Audio":
+                            should_forward = settings.get('filter_audio', True)
+                        elif msg_type == "Animation":
+                            should_forward = settings.get('filter_animation', True)
+                        elif msg_type == "Voice":
+                            should_forward = settings.get('filter_voice', True)
+                        elif msg_type == "Sticker":
+                            should_forward = settings.get('filter_sticker', True)
+                    
+                    # Forward to destination channel if configured and filter allows
+                    if forward_dest and should_forward:
+                        try:
+                            # First, ensure the destination channel is in bot's cache
+                            try:
+                                await client.get_chat(forward_dest)
+                            except:
+                                pass  # If get_chat fails, try forwarding anyway
+                            
+                            await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
+                        except Exception as fwd_error:
+                            print(f"[WARNING] Failed to forward to destination channel {forward_dest}: {fwd_error}")
+                    
+                    # Forward to log channel
+                    if LOG_CHANNEL_ID != 0:
+                        try:
+                            # First, ensure the log channel is in bot's cache
+                            try:
+                                await client.get_chat(LOG_CHANNEL_ID)
+                            except:
+                                pass  # If get_chat fails, try forwarding anyway
+                            
+                            # Copy the file to log channel
+                            await client.copy_message(LOG_CHANNEL_ID, message.chat.id, sent_msg.id)
+                            
+                            # Send user info to log channel
+                            filename = "public_channel_file"
+                            if msg_type == "Document" and msg.document and msg.document.file_name:
+                                filename = msg.document.file_name
+                            elif msg_type == "Video" and msg.video and msg.video.file_name:
+                                filename = msg.video.file_name
+                            elif msg_type == "Audio" and msg.audio and msg.audio.file_name:
+                                filename = msg.audio.file_name
+                            elif msg_type:
+                                filename = msg_type.lower()
+                            
+                            log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {message.from_user.mention}\n🆔 ID: <code>{message.from_user.id}</code>\n📝 File: <code>{filename}</code>"
+                            await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
+                        except Exception as log_error:
+                            print(f"[WARNING] Log channel error for {LOG_CHANNEL_ID}: {log_error}")
+                    
+                except Exception as copy_error:
+                    # If simple copy fails, try with user session (for restricted public content)
+                    user_data = await db.get_session(message.from_user.id)
+                    if user_data is None:
                         failed_downloads += 1
                         if ERROR_MESSAGE == True:
-                            await client.send_message(message.chat.id, f"Error on file {msgid}: {e}", reply_to_message_id=message.id)
+                            await client.send_message(message.chat.id, f"❌ **Error on file {msgid}:** Content is restricted. Please use `/login` to access.", reply_to_message_id=message.id)
+                    else:
+                        try:
+                            acc = Client("saverestricted", session_string=user_data, api_hash=API_HASH, api_id=API_ID)
+                            await acc.connect()
+                            await handle_private(client, acc, message, username, msgid)
+                            successful_downloads += 1
+                        except Exception as e:
+                            failed_downloads += 1
+                            if ERROR_MESSAGE == True:
+                                await client.send_message(message.chat.id, f"❌ **Error on file {msgid}:** `{e}`", reply_to_message_id=message.id)
 
             # Minimal wait time for faster batch processing
             await asyncio.sleep(0.05)  # Reduced to 50ms for even faster processing
@@ -1694,7 +1796,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_document:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward to channel: {e}")
             
@@ -1778,7 +1880,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_video:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward to channel: {e}")
             
@@ -1807,7 +1909,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_animation:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward animation to channel: {e}")
             
@@ -1830,7 +1932,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_sticker:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward sticker to channel: {e}")
             
@@ -1853,7 +1955,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_voice:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward voice to channel: {e}")
             
@@ -1920,7 +2022,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_audio:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward to channel: {e}")
             
@@ -1977,7 +2079,7 @@ async def handle_private(client: Client, acc, message: Message, chatid: int, msg
             # Forward to destination channel instantly using copy_message (no re-upload!)
             if forward_dest and filter_photo:
                 try:
-                    await client.copy_message(forward_dest, chat, sent_msg.id)
+                    await client.copy_message(forward_dest, message.chat.id, sent_msg.id)
                 except Exception as e:
                     print(f"[WARNING] Failed to forward to channel: {e}")
             

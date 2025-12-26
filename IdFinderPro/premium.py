@@ -2,7 +2,7 @@ import time
 import random
 import string
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, LabeledPrice, PreCheckoutQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from database.db import db
 from config import ADMINS
 
@@ -168,58 +168,44 @@ async def list_premium_users(client: Client, message: Message):
         reply_markup=InlineKeyboardMarkup(buttons)
     )
 
-# Payment with Telegram Stars
-@Client.on_callback_query(filters.regex(r"^pay_stars_"))
-async def handle_stars_payment(client: Client, query):
-    stars_amount = int(query.data.split("_")[-1])
-    
-    # Create invoice
-    await query.message.reply_invoice(
-        title="Premium Membership",
-        description=f"Get {stars_amount} hour(s) of premium access",
-        payload=f"premium_{stars_amount}h",
-        currency="XTR",  # Telegram Stars
-        prices=[LabeledPrice(label="Premium", amount=stars_amount)]
-    )
-    
-    await query.answer()
 
-# Handle successful payment
-@Client.on_pre_checkout_query()
-async def on_pre_checkout_query(client: Client, query: PreCheckoutQuery):
-    await query.answer(ok=True)
 
-@Client.on_message(filters.successful_payment)
-async def on_successful_payment(client: Client, message: Message):
-    payment = message.successful_payment
-    payload = payment.invoice_payload
-    
-    # Extract hours from payload
-    hours = int(payload.split("_")[1].replace("h", ""))
-    
-    # Calculate expiry
-    duration = hours * 60 * 60  # Convert to seconds
-    expiry_time = time.time() + duration
-    
-    # Set premium
-    await db.set_premium(message.from_user.id, True, expiry_time)
-    
-    from datetime import datetime
-    expiry_date = datetime.fromtimestamp(expiry_time).strftime('%Y-%m-%d %H:%M:%S')
-    
-    await message.reply(f"""
-✅ **Payment Successful!**
+# Telegram Stars payment handlers disabled - requires newer Pyrogram version
+# @Client.on_pre_checkout_query()
+# async def on_pre_checkout_query(client: Client, query):
+#     await query.answer(ok=True)
 
-**Premium Activated:** {hours} hour(s)
-**Expires:** {expiry_date}
-
-**Benefits:**
-• Unlimited downloads per day
-• Priority support  
-• Faster downloads
-
-Thank you for your support! 🎉
-""")
+# @Client.on_message(filters.successful_payment)
+# async def on_successful_payment(client: Client, message: Message):
+#     payment = message.successful_payment
+#     payload = payment.invoice_payload
+#     
+#     # Extract hours from payload
+#     hours = int(payload.split("_")[1].replace("h", ""))
+#     
+#     # Calculate expiry
+#     duration = hours * 60 * 60  # Convert to seconds
+#     expiry_time = time.time() + duration
+#     
+#     # Set premium
+#     await db.set_premium(message.from_user.id, True, expiry_time)
+#     
+#     from datetime import datetime
+#     expiry_date = datetime.fromtimestamp(expiry_time).strftime('%Y-%m-%d %H:%M:%S')
+#     
+#     await message.reply(f"""
+# ✅ **Payment Successful!**
+# 
+# **Premium Activated:** {hours} hour(s)
+# **Expires:** {expiry_date}
+# 
+# **Benefits:**
+# • Unlimited downloads per day
+# • Priority support  
+# • Faster downloads
+# 
+# Thank you for your support! 🎉
+# """)
 
 # Handle amount input for code generation
 @Client.on_message(filters.private & filters.text & filters.user(ADMINS), group=10)

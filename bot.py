@@ -59,6 +59,16 @@ class Bot(Client):
             BotCommand("cancel", "Cancel download")
         ])
         
+        # Pre-populate cache for log channel to prevent "Peer id invalid" errors
+        from config import LOG_CHANNEL_ID
+        if LOG_CHANNEL_ID != 0:
+            try:
+                log_chat = await self.get_chat(LOG_CHANNEL_ID)
+                print(f'✅ Log channel connected: {log_chat.title}')
+            except Exception as e:
+                print(f'⚠️  Warning: Could not access log channel {LOG_CHANNEL_ID}: {e}')
+                print('   Make sure the bot is added as admin in the log channel')
+        
         print('='*50)
         print('RESTRICTED CONTENT DOWNLOAD BOT STARTED')
         print('Made by: Surya (@tataa_sumo)')

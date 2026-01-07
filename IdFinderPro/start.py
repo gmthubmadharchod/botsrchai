@@ -703,7 +703,8 @@ Choose your preferred payment method:"""
         
         buttons = [
             [InlineKeyboardButton("🇮🇳 Pay with UPI (INR)", callback_data=f"premium_inr_{plan}")],
-            [InlineKeyboardButton("🌍 Pay with USD/USDT", callback_data=f"premium_usd_{plan}")],
+            [InlineKeyboardButton("💰 Pay with Crypto", callback_data=f"crypto_pay_{plan}")],
+            [InlineKeyboardButton("🌍 Pay with USD (Manual)", callback_data=f"premium_usd_{plan}")],
             [InlineKeyboardButton("🔙 Back", callback_data="premium_select_plan")]
         ]
         

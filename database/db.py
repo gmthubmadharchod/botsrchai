@@ -495,5 +495,47 @@ class Database:
         async for user in cursor:
             banned_users.append(user)
         return banned_users
+    
+    # Crypto payment methods
+    async def create_crypto_invoice(self, invoice_id, user_id, plan, amount, asset, pay_url):
+        """Store a crypto payment invoice"""
+        import time
+        crypto_col = self.db.crypto_payments
+        await crypto_col.insert_one({
+            'invoice_id': invoice_id,
+            'user_id': int(user_id),
+            'plan': plan,
+            'amount': float(amount),
+            'asset': asset,
+            'pay_url': pay_url,
+            'status': 'pending',
+            'created_at': time.time()
+        })
+    
+    async def get_crypto_invoice(self, invoice_id):
+        """Get crypto invoice by ID"""
+        crypto_col = self.db.crypto_payments
+        return await crypto_col.find_one({'invoice_id': invoice_id})
+    
+    async def update_crypto_invoice_status(self, invoice_id, status, paid_at=None):
+        """Update crypto invoice status"""
+        crypto_col = self.db.crypto_payments
+        update_data = {'status': status}
+        if paid_at:
+            update_data['paid_at'] = paid_at
+        await crypto_col.update_one(
+            {'invoice_id': invoice_id},
+            {'$set': update_data}
+        )
+    
+    async def get_pending_crypto_invoices(self, user_id):
+        """Get pending crypto invoices for a user"""
+        crypto_col = self.db.crypto_payments
+        cursor = crypto_col.find({'user_id': int(user_id), 'status': 'pending'})
+        invoices = []
+        async for inv in cursor:
+            invoices.append(inv)
+        return invoices
 
 db = Database(DB_URI, DB_NAME)
+

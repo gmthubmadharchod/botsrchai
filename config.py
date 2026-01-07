@@ -26,3 +26,9 @@ LOG_CHANNEL_ID = int(os.environ.get("LOG_CHANNEL_ID", "-1003439064088"))
 
 # If You Want Error Message In Your Personal Message Then Turn It True Else If You Don't Want Then Flase
 ERROR_MESSAGE = bool(os.environ.get('ERROR_MESSAGE', True))
+
+# Crypto Pay API Configuration (@CryptoBot / @send)
+# Get your API token from https://t.me/CryptoBot?start=pay -> Create App
+CRYPTO_PAY_API_TOKEN = os.environ.get("CRYPTO_PAY_API_TOKEN", "")  # Your Crypto Pay API token
+CRYPTO_PAY_TESTNET = os.environ.get("CRYPTO_PAY_TESTNET", "False").lower() == "true"  # Set to True for testing with @CryptoTestnetBot
+

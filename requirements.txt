@@ -8,3 +8,4 @@ werkzeug>=3.0.1
 itsdangerous>=2.1.2
 aiohttp>=3.9.0  # Required for async operations
 qrcode[pil]
+aiocryptopay>=0.4.3  # Crypto Pay API for cryptocurrency payments

@@ -119,7 +119,7 @@ class Database:
         
         # Check limits
         is_premium_user = await self.is_premium(user_id)
-        limit = 999999 if is_premium_user else 10  # Premium: Unlimited, Free: 10/day
+        limit = 500 if is_premium_user else 10  # Premium: Unlimited, Free: 10/day
         
         if downloads_today >= limit:
             return False  # Limit exceeded
@@ -350,16 +350,16 @@ class Database:
     async def init_global_settings(self):
         """Initialize global settings with defaults if not exist"""
         defaults = {
-            'pricing_1day': 10,
+            'pricing_1day': 20,
             'pricing_7day': 40,
-            'pricing_30day': 100,
+            'pricing_30day': 150,
             'pricing_1day_usd': 0.15,
             'pricing_7day_usd': 0.50,
             'pricing_30day_usd': 1.20,
-            'admin_telegram_handle': '@tataa_sumo',
+            'admin_telegram_handle': '@SonuPorsa',
             'help_footer': 'For support, contact admin',
             'free_daily_limit': 10,
-            'premium_daily_limit': 999999
+            'premium_daily_limit': 500
         }
         
         for key, value in defaults.items():

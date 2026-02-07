@@ -301,7 +301,7 @@ async def send_start(client: Client, message: Message):
 📊 Usage: {downloads_today}/{limit} downloads today
 
 **Quick Start:**
-1. Must join @{FORCE_SUB_CHANNEL}
+1. Must join @Save_Restricted_Content17_bot
 2. Use /login to authenticate
 3. Send any Telegram post link
 4. Get your content!
@@ -314,7 +314,7 @@ async def send_start(client: Client, message: Message):
         InlineKeyboardButton("💎 Premium", callback_data="premium_info")
     ],[
         InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/SonuPorsa"),
-        InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL}")
+        InlineKeyboardButton("📢 Channel", url=f"https://t.me/Save_Restricted_Content17_bot")
     ]]
     reply_markup = InlineKeyboardMarkup(buttons)
     await client.send_message(

@@ -5,7 +5,7 @@
 
 echo "========================================"
 echo "Starting Restricted Content Download Bot"
-echo "Made by: Surya (@tataa_sumo)"
+echo "Made by: Sonu (@Sonuporsa)"
 echo "========================================"
 
 # Check if session file exists and is valid

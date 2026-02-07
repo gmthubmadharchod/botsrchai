@@ -18,7 +18,7 @@ DB_URI = os.environ.get("DB_URI", "") # Warning - Give Db uri in deploy server e
 DB_NAME = os.environ.get("DB_NAME", "")
 
 # Force Subscription Channel
-FORCE_SUB_CHANNEL = "idfinderpro"  # Channel username without @
+FORCE_SUB_CHANNEL = "Save_Restricted7_bot"  # Channel username without @
 FORCE_SUB_CHANNEL_ID = int(os.environ.get("CHANNEL_ID", ""))
 
 # Log Channel - Set to 0 to disable logging

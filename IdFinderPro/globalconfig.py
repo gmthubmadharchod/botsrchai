@@ -16,10 +16,10 @@ async def globalconfig_menu(client: Client, message: Message):
 Manage bot-wide settings and pricing.
 
 **Current Settings:**
-• **1 Day Price:** ₹{settings.get('pricing_1day', 10)}
+• **1 Day Price:** ₹{settings.get('pricing_1day', 20)}
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
-• **30 Days Price:** ₹{settings.get('pricing_30day', 100)}
-• **Admin Handle:** {settings.get('admin_telegram_handle', '@tataa_sumo')}
+• **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
+• **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
 • **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
 • **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}"""
     
@@ -44,9 +44,9 @@ async def globalconfig_callback_handler(client: Client, query):
         text = f"""**💰 Pricing Configuration**
 
 **Current Prices:**
-• **1 Day:** ₹{settings.get('pricing_1day', 10)}
+• **1 Day:** ₹{settings.get('pricing_1day', 20)}
 • **7 Days:** ₹{settings.get('pricing_7day', 40)}
-• **30 Days:** ₹{settings.get('pricing_30day', 100)}
+• **30 Days:** ₹{settings.get('pricing_30day', 150)}
 
 Select which price to edit:"""
         
@@ -142,10 +142,10 @@ Send /cancel to cancel."""
 Manage bot-wide settings and pricing.
 
 **Current Settings:**
-• **1 Day Price:** ₹{settings.get('pricing_1day', 10)}
+• **1 Day Price:** ₹{settings.get('pricing_1day', 20)}
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
-• **30 Days Price:** ₹{settings.get('pricing_30day', 100)}
-• **Admin Handle:** {settings.get('admin_telegram_handle', '@tataa_sumo')}
+• **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
+• **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
 • **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
 • **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}"""
         

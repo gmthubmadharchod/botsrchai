@@ -85,7 +85,7 @@ async def create_crypto_invoice(user_id: int, plan: str, amount_usd: float):
         "description": f"Premium {days} Day(s) - ID Finder Pro Bot",
         "hidden_message": "Thank you for your purchase! Your premium has been activated.",
         "paid_btn_name": "openBot",
-        "paid_btn_url": "https://t.me/idfinderpro_bot",
+        "paid_btn_url": "https://t.me/Save_Restricted_bot",
         "payload": f"{user_id}:{plan}",
         "allow_comments": False,
         "allow_anonymous": True,

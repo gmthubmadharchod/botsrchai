@@ -71,8 +71,8 @@ class Bot(Client):
         
         print('='*50)
         print('RESTRICTED CONTENT DOWNLOAD BOT STARTED')
-        print('Made by: Surya (@tataa_sumo)')
-        print('Channel: @idfinderpro')
+        print('Made by: Sonu (@SonuPorsa)')
+        print('Channel: @Save_Restricted_Content17_bot')
         print('='*50)
 
     async def stop(self, *args):

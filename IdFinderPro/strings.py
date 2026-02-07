@@ -21,7 +21,7 @@ Send invite link → Then post link
 
 **💎 Rate Limits:**
 • **Free Users:** 10 downloads/day
-• **Premium Users:** Unlimited downloads
+• **Premium Users:** unlimited downloads
 
 Upgrade with /premium!
 
@@ -89,7 +89,7 @@ PREMIUM_HELP = """**💎 Premium Membership - Unlock Full Power**
 ✅ **Custom thumbnails & captions**
 
 **💰 Pricing:**
-• **₹10** - 1 Day
+• **₹20** - 1 Day
 • **₹40** - 7 Days  
 • **₹150** - 30 Days
 

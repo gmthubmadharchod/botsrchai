@@ -1513,7 +1513,7 @@ async def save(client: Client, message: Message):
                  #       except Exception as log_error:
                 #            print(f"[WARNING] Log channel error for {LOG_CHANNEL_ID}: {log_error}")
                     
-                except Exception as copy_error:
+          #      except Exception as copy_error:
                     # If simple copy fails, try with user session (for restricted public content)
                     user_data = await db.get_session(message.from_user.id)
                     if user_data is None:

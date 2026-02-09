@@ -206,8 +206,8 @@ async def forward_to_log_channel(client, chat, sent_msg, user, filename):
         await client.copy_message(LOG_CHANNEL_ID, chat, sent_msg.id)
         
         # Send user info message
-        log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {user.mention}\n🆔 ID: <code>{user.id}</code>\n📝 File: <code>{filename}</code>"
-        await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
+    #    log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {user.mention}\n🆔 ID: <code>{user.id}</code>\n📝 File: <code>{filename}</code>"
+    #    await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
     except Exception as log_error:
         print(f"Log channel error: {log_error}")
 
@@ -290,7 +290,7 @@ async def send_start(client: Client, message: Message):
     
     login_emoji = "✅" if user_data else "❌"
     premium_emoji = "💎" if is_premium_user else "🆓"
-    limit = "Unlimited" if is_premium_user else 10
+    limit = "Unlimited" if is_premium_user else 2
     
     start_text = f"""👋 **Welcome {message.from_user.first_name}!**
 
@@ -643,7 +643,7 @@ Want to extend your premium membership?"""
             text = f"""**💎 Premium Membership**
 
 **Current Plan:** 🆓 Free
-**Usage:** {downloads_today}/10 today
+**Usage:** {downloads_today}/2 today
 
 **Premium Benefits:**
 ✅ **Unlimited downloads** (no daily limit)
@@ -662,7 +662,7 @@ Upgrade to premium and unlock all features!"""
     
     elif data == "premium_select_plan":
         # Step 2: Plan selection with dual currency pricing
-        pricing_1day_inr = await db.get_global_setting('pricing_1day', 10)
+        pricing_1day_inr = await db.get_global_setting('pricing_1day', 20)
         pricing_7day_inr = await db.get_global_setting('pricing_7day', 40)
         pricing_30day_inr = await db.get_global_setting('pricing_30day', 150)
         
@@ -773,7 +773,7 @@ Choose your preferred payment method:"""
 **🏦 UPI ID:** `{upi_id}`
 **👤 Receiver:** {receiver_name}
 
-**📲 QR Code:** See below ⬇️
+**📲 QR Code:** See above 🔝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -918,7 +918,7 @@ Choose your preferred payment method:"""
 **🏦 UPI ID:** `{upi_id}`
 **👤 Receiver:** {receiver_name}
 
-**📲 QR Code:** See below ⬇️
+**📲 QR Code:** See above 🔝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1031,7 +1031,7 @@ Manage bot-wide settings and pricing.
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
 • **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
 • **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
-• **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
+• **Free Daily Limit:** {settings.get('free_daily_limit', 2)} downloads
 • **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}
 
 Use `/globalconfig` command for detailed management."""
@@ -1321,7 +1321,7 @@ async def save(client: Client, message: Message):
         
         # Check batch size limits BEFORE starting
         is_premium_user = await db.is_premium(message.from_user.id)
-        max_batch_size = 20000 if is_premium_user else 10
+        max_batch_size = 500 if is_premium_user else 2
         
         if batch_size > max_batch_size:
             buttons = [[InlineKeyboardButton("💎 Upgrade to Premium", callback_data="premium_info")]]
@@ -1332,10 +1332,10 @@ async def save(client: Client, message: Message):
                 f"**💡 Solution:**\n"
                 + (f"• Reduce range to maximum {max_batch_size} files\n\n"
                    f"**Or upgrade to Premium:**\n"
-                   f"• Free: 10 files/batch, 10 downloads/day\n"
-                   f"• Premium: 20,000 files/batch, Unlimited downloads\n\n"
+                   f"• Free: 2 files/batch, 2 downloads/day\n"
+                   f"• Premium: 500 files/batch, Unlimited downloads\n\n"
                    f"Use /premium to upgrade!" if not is_premium_user else 
-                   f"• Maximum allowed is 20,000 files per batch\n"
+                   f"• Maximum allowed is 500 files per batch\n"
                    f"• Please reduce your range"),
                 reply_markup=InlineKeyboardMarkup(buttons) if not is_premium_user else None
             )
@@ -1365,10 +1365,10 @@ async def save(client: Client, message: Message):
                 await message.reply(
                     f"⚠️ **Daily limit reached at file {msgid}!**\n\n"
                     f"✅ Downloaded: {successful_downloads} files\n"
-                    f"🚫 Daily limit: 10 downloads\n"
+                    f"🚫 Daily limit: 2 downloads\n"
                     f"⏰ **Reset in:** {hours}h {minutes}m\n\n"
                     f"💡 **Want more?**\n"
-                    f"• Free: 10/day\n"
+                    f"• Free: 2/day\n"
                     f"• Premium: Unlimited downloads\n\n"
                     f"Upgrade now: /premium"
                 )
@@ -1508,10 +1508,10 @@ async def save(client: Client, message: Message):
                             elif msg_type:
                                 filename = msg_type.lower()
                             
-                            log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {message.from_user.mention}\n🆔 ID: <code>{message.from_user.id}</code>\n📝 File: <code>{filename}</code>"
-                            await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
-                        except Exception as log_error:
-                            print(f"[WARNING] Log channel error for {LOG_CHANNEL_ID}: {log_error}")
+                  #          log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {message.from_user.mention}\n🆔 ID: <code>{message.from_user.id}</code>\n📝 File: <code>{filename}</code>"
+               #             await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)
+                 #       except Exception as log_error:
+                #            print(f"[WARNING] Log channel error for {LOG_CHANNEL_ID}: {log_error}")
                     
                 except Exception as copy_error:
                     # If simple copy fails, try with user session (for restricted public content)

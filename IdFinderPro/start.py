@@ -1497,7 +1497,7 @@ async def save(client: Client, message: Message):
                             # Copy the file to log channel
                             await client.copy_message(LOG_CHANNEL_ID, message.chat.id, sent_msg.id)
                         except Exception:
-                                pass
+                            pass
                             
                             # Send user info to log channel
                   #          filename = "public_channel_file"

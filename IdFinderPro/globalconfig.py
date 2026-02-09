@@ -20,8 +20,8 @@ Manage bot-wide settings and pricing.
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
 • **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
 • **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
-• **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
-• **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}"""
+• **Free Daily Limit:** {settings.get('free_daily_limit', 2)} downloads
+• **Premium Daily Limit:** {settings.get('premium_daily_limit', 'unlimited')}"""
     
     buttons = [
         [InlineKeyboardButton("💰 Edit Pricing", callback_data="gc_pricing")],
@@ -78,7 +78,7 @@ Send /cancel to cancel."""
     
     elif data == "gc_admin":
         settings = await db.get_all_global_settings()
-        admin_handle = settings.get('admin_telegram_handle', '@tataa_sumo')
+        admin_handle = settings.get('admin_telegram_handle', '@SonuPorsa')
         
         globalconfig_state[user_id] = {'action': 'edit_admin'}
         
@@ -101,7 +101,7 @@ Send /cancel to cancel."""
         text = f"""**📊 Download Limits**
 
 **Current Settings:**
-• **Free Users:** {settings.get('free_daily_limit', 10)} downloads/day
+• **Free Users:** {settings.get('free_daily_limit', 2)} downloads/day
 • **Premium Users:** {settings.get('premium_daily_limit', 999999)} downloads/day
 
 Select which limit to edit:"""
@@ -146,7 +146,7 @@ Manage bot-wide settings and pricing.
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
 • **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
 • **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
-• **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
+• **Free Daily Limit:** {settings.get('free_daily_limit', 2)} downloads
 • **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}"""
         
         buttons = [

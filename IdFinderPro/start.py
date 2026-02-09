@@ -1496,17 +1496,19 @@ async def save(client: Client, message: Message):
                             
                             # Copy the file to log channel
                             await client.copy_message(LOG_CHANNEL_ID, message.chat.id, sent_msg.id)
+                        except Exception:
+                                pass
                             
                             # Send user info to log channel
-                            filename = "public_channel_file"
-                            if msg_type == "Document" and msg.document and msg.document.file_name:
-                                filename = msg.document.file_name
-                            elif msg_type == "Video" and msg.video and msg.video.file_name:
-                                filename = msg.video.file_name
-                            elif msg_type == "Audio" and msg.audio and msg.audio.file_name:
-                                filename = msg.audio.file_name
-                            elif msg_type:
-                                filename = msg_type.lower()
+                  #          filename = "public_channel_file"
+                  #          if msg_type == "Document" and msg.document and msg.document.file_name:
+                   #             filename = msg.document.file_name
+                      #      elif msg_type == "Video" and msg.video and msg.video.file_name:
+                       #         filename = msg.video.file_name
+                       #     elif msg_type == "Audio" and msg.audio and msg.audio.file_name:
+                        #        filename = msg.audio.file_name
+                      #      elif msg_type:
+                       #         filename = msg_type.lower()
                             
                   #          log_caption = f"📄 <b>File Downloaded</b>\n\n👤 User: {message.from_user.mention}\n🆔 ID: <code>{message.from_user.id}</code>\n📝 File: <code>{filename}</code>"
                #             await client.send_message(LOG_CHANNEL_ID, log_caption, parse_mode=enums.ParseMode.HTML)

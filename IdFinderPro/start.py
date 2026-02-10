@@ -313,7 +313,7 @@ async def send_start(client: Client, message: Message):
         InlineKeyboardButton("📖 Help", callback_data="help"),
         InlineKeyboardButton("💎 Premium", callback_data="premium_info")
     ],[
-        InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/tataa_sumo"),
+        InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/SonuPorsa"),
         InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL}")
     ]]
     reply_markup = InlineKeyboardMarkup(buttons)
@@ -380,7 +380,7 @@ This will download messages from 100 to 150!
 • Use `/cancel` to stop batch download
 • Spaces in range don't matter: `1 - 10` works!
 • Premium users: Unlimited downloads
-• Free users: 10 downloads/day
+• Free users: 2 downloads/day
 
 **💡 Pro Tip:**
 Start with small ranges to test, then do larger batches!
@@ -558,7 +558,7 @@ async def callback_handler(client: Client, query):
             InlineKeyboardButton("📖 Help", callback_data="help"),
             InlineKeyboardButton("💎 Premium", callback_data="premium_info")
         ],[
-            InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/tataa_sumo"),
+            InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/SonuPorsa"),
             InlineKeyboardButton("📢 Channel", url=f"https://t.me/{FORCE_SUB_CHANNEL}")
         ]]
         
@@ -643,7 +643,7 @@ Want to extend your premium membership?"""
             text = f"""**💎 Premium Membership**
 
 **Current Plan:** 🆓 Free
-**Usage:** {downloads_today}/10 today
+**Usage:** {downloads_today}/2 today
 
 **Premium Benefits:**
 ✅ **Unlimited downloads** (no daily limit)
@@ -662,9 +662,9 @@ Upgrade to premium and unlock all features!"""
     
     elif data == "premium_select_plan":
         # Step 2: Plan selection with dual currency pricing
-        pricing_1day_inr = await db.get_global_setting('pricing_1day', 10)
+        pricing_1day_inr = await db.get_global_setting('pricing_1day', 20)
         pricing_7day_inr = await db.get_global_setting('pricing_7day', 40)
-        pricing_30day_inr = await db.get_global_setting('pricing_30day', 100)
+        pricing_30day_inr = await db.get_global_setting('pricing_30day', 150)
         
         pricing_1day_usd = await db.get_global_setting('pricing_1day_usd', 0.15)
         pricing_7day_usd = await db.get_global_setting('pricing_7day_usd', 0.50)
@@ -773,7 +773,7 @@ Choose your preferred payment method:"""
 **🏦 UPI ID:** `{upi_id}`
 **👤 Receiver:** {receiver_name}
 
-**📲 QR Code:** See below ⬇️
+**📲 QR Code:** See above 🔝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -879,7 +879,7 @@ Choose your preferred payment method:"""
         receiver_name = upi_details['receiver_name']
         
         # Get admin handle
-        admin_handle = await db.get_global_setting('admin_telegram_handle', '@tataa_sumo')
+        admin_handle = await db.get_global_setting('admin_telegram_handle', '@SonuPorsa')
         
         if not upi_id or not receiver_name:
             await query.answer("❌ UPI payment not configured yet! Contact admin.", show_alert=True)
@@ -918,7 +918,7 @@ Choose your preferred payment method:"""
 **🏦 UPI ID:** `{upi_id}`
 **👤 Receiver:** {receiver_name}
 
-**📲 QR Code:** See below ⬇️
+**📲 QR Code:** See above 🔝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1027,11 +1027,11 @@ Choose your preferred payment method:"""
 Manage bot-wide settings and pricing.
 
 **Current Settings:**
-• **1 Day Price:** ₹{settings.get('pricing_1day', 10)}
+• **1 Day Price:** ₹{settings.get('pricing_1day', 20)}
 • **7 Days Price:** ₹{settings.get('pricing_7day', 40)}
-• **30 Days Price:** ₹{settings.get('pricing_30day', 100)}
-• **Admin Handle:** {settings.get('admin_telegram_handle', '@tataa_sumo')}
-• **Free Daily Limit:** {settings.get('free_daily_limit', 10)} downloads
+• **30 Days Price:** ₹{settings.get('pricing_30day', 150)}
+• **Admin Handle:** {settings.get('admin_telegram_handle', '@SonuPorsa')}
+• **Free Daily Limit:** {settings.get('free_daily_limit', 2)} downloads
 • **Premium Daily Limit:** {settings.get('premium_daily_limit', 'Unlimited')}
 
 Use `/globalconfig` command for detailed management."""
@@ -1111,9 +1111,9 @@ Use `/addupi` command for detailed management.
 • Force Subscribe Channels: {len(force_sub_channels)}/4
 
 **Premium Plans:**
-• 1 Day: ₹{await db.get_global_setting('pricing_1day', 10)}
+• 1 Day: ₹{await db.get_global_setting('pricing_1day', 20)}
 • 7 Days: ₹{await db.get_global_setting('pricing_7day', 40)}
-• 30 Days: ₹{await db.get_global_setting('pricing_30day', 100)}"""
+• 30 Days: ₹{await db.get_global_setting('pricing_30day', 150)}"""
         
         buttons = [[InlineKeyboardButton("🏠 Back to Admin", callback_data="admin_panel")]]
         await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
@@ -1164,8 +1164,8 @@ I can help you download and forward restricted content from Telegram channels, g
             InlineKeyboardButton("📖 Help Guide", callback_data="help"),
             InlineKeyboardButton("🔐 Login", callback_data="login_info")
         ],[
-            InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/tataa_sumo"),
-            InlineKeyboardButton("📢 Updates", url="https://t.me/idfinderpro")
+            InlineKeyboardButton("👨‍💻 Developer", url="https://t.me/SonuPorsa"),
+            InlineKeyboardButton("📢 Updates", url="https://t.me/Save_Restricted_Content17_bot")
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.message.edit_text(
@@ -1249,7 +1249,7 @@ async def save(client: Client, message: Message):
         await message.reply(
             "🚫 **You are banned from using this bot!**\n\n"
             f"**Reason:** {reason}\n\n"
-            "📩 **Contact admin for unban:** @tataa_sumo"
+            "📩 **Contact admin for unban:** @SonuPorsa"
         )
         return
     
@@ -1332,10 +1332,10 @@ async def save(client: Client, message: Message):
                 f"**💡 Solution:**\n"
                 + (f"• Reduce range to maximum {max_batch_size} files\n\n"
                    f"**Or upgrade to Premium:**\n"
-                   f"• Free: 10 files/batch, 10 downloads/day\n"
-                   f"• Premium: 20,000 files/batch, Unlimited downloads\n\n"
+                   f"• Free: 2 files/batch, 2 downloads/day\n"
+                   f"• Premium: 500 files/batch, Unlimited downloads\n\n"
                    f"Use /premium to upgrade!" if not is_premium_user else 
-                   f"• Maximum allowed is 20,000 files per batch\n"
+                   f"• Maximum allowed is 500 files per batch\n"
                    f"• Please reduce your range"),
                 reply_markup=InlineKeyboardMarkup(buttons) if not is_premium_user else None
             )
@@ -1365,7 +1365,7 @@ async def save(client: Client, message: Message):
                 await message.reply(
                     f"⚠️ **Daily limit reached at file {msgid}!**\n\n"
                     f"✅ Downloaded: {successful_downloads} files\n"
-                    f"🚫 Daily limit: 10 downloads\n"
+                    f"🚫 Daily limit: 2 downloads\n"
                     f"⏰ **Reset in:** {hours}h {minutes}m\n\n"
                     f"💡 **Want more?**\n"
                     f"• Free: 10/day\n"

@@ -290,7 +290,7 @@ async def send_start(client: Client, message: Message):
     
     login_emoji = "✅" if user_data else "❌"
     premium_emoji = "💎" if is_premium_user else "🆓"
-    limit = "Unlimited" if is_premium_user else 10
+    limit = "Unlimited" if is_premium_user else 2
     
     start_text = f"""👋 **Welcome {message.from_user.first_name}!**
 
@@ -535,7 +535,7 @@ async def callback_handler(client: Client, query):
         
         login_emoji = "✅" if user_data else "❌"
         premium_emoji = "💎" if is_premium_user else "🆓"
-        limit = "Unlimited" if is_premium_user else 10
+        limit = "Unlimited" if is_premium_user else 2
         
         start_text = f"""👋 **Welcome {query.from_user.first_name}!**
 

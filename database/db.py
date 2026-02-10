@@ -119,7 +119,7 @@ class Database:
         
         # Check limits
         is_premium_user = await self.is_premium(user_id)
-        limit = 500 if is_premium_user else 2  # Premium: Unlimited, Free: 10/day
+        limit = 99999 if is_premium_user else 2  # Premium: Unlimited, Free: 10/day
         
         if downloads_today >= limit:
             return False  # Limit exceeded
@@ -359,7 +359,7 @@ class Database:
             'admin_telegram_handle': '@SonuPorsa',
             'help_footer': 'For support, contact admin',
             'free_daily_limit': 2,
-            'premium_daily_limit': 9999
+            'premium_daily_limit': 99999
         }
         
         for key, value in defaults.items():

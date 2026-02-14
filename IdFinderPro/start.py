@@ -1368,7 +1368,7 @@ async def save(client: Client, message: Message):
                     f"🚫 Daily limit: 2 downloads\n"
                     f"⏰ **Reset in:** {hours}h {minutes}m\n\n"
                     f"💡 **Want more?**\n"
-                    f"• Free: 10/day\n"
+                    f"• Free: 2/day\n"
                     f"• Premium: Unlimited downloads\n\n"
                     f"Upgrade now: /premium"
                 )
